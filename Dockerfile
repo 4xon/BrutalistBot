@@ -1,54 +1,28 @@
-# Build stage
-FROM node:18-alpine AS builder
+# Use the official Node.js 18 Alpine image
+FROM node:18-alpine
 
-# Install build dependencies
+# Install system dependencies
 RUN apk add --no-cache \
     python3 \
     make \
     g++ \
     git \
-    unzip \
-    curl
+    ffmpeg
 
-# Install Bun using the official installation script with sh
-RUN wget -O- https://bun.sh/install | sh
-ENV PATH="/root/.bun/bin:${PATH}"
-
+# Set working directory
 WORKDIR /app
 
-# Copy package files first for better caching
-COPY package.json bun.lock* ./
+# Copy package files
+COPY package*.json ./
 
-# Install production dependencies only
-RUN bun install --frozen-lockfile --production
+# Install dependencies
+RUN npm install --production
 
-# Copy the rest of the application
+# Copy application source
 COPY . .
 
 # Build the application
-RUN bun run build
-
-# Production stage
-FROM node:18-alpine
-
-WORKDIR /app
-
-# Install runtime dependencies
-RUN apk add --no-cache ffmpeg curl
-
-# Install Bun using the official installation script with sh
-RUN wget -O- https://bun.sh/install | sh
-ENV PATH="/root/.bun/bin:${PATH}"
-
-# Copy built files from builder
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package.json .
-
-# Create non-root user
-RUN addgroup -S app && adduser -S app -G app
-RUN chown -R app:app /app
-USER app
+RUN npm run build
 
 # Set environment variables
 ENV NODE_ENV=production
@@ -58,7 +32,7 @@ ENV PORT=3000
 EXPOSE 3000
 
 # Command to run the application
-CMD ["bun", "start"]
+CMD ["npm", "start"]
 USER node
 
 
