@@ -10,8 +10,8 @@ RUN apk add --no-cache \
     unzip \
     curl
 
-# Install Bun using the official installation script
-RUN curl -fsSL https://bun.sh/install | bash
+# Install Bun using the official installation script with sh
+RUN wget -O- https://bun.sh/install | sh
 ENV PATH="/root/.bun/bin:${PATH}"
 
 WORKDIR /app
@@ -36,8 +36,8 @@ WORKDIR /app
 # Install runtime dependencies
 RUN apk add --no-cache ffmpeg curl
 
-# Install Bun using the official installation script
-RUN curl -fsSL https://bun.sh/install | bash
+# Install Bun using the official installation script with sh
+RUN wget -O- https://bun.sh/install | sh
 ENV PATH="/root/.bun/bin:${PATH}"
 
 # Copy built files from builder
