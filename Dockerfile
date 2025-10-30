@@ -6,10 +6,13 @@ RUN apk add --no-cache \
     python3 \
     make \
     g++ \
-    git
+    git \
+    unzip \
+    curl
 
-# Install bun
-RUN npm install -g bun@1.0.22
+# Install Bun using the official installation script
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH="/root/.bun/bin:${PATH}"
 
 WORKDIR /app
 
@@ -31,10 +34,11 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Install runtime dependencies
-RUN apk add --no-cache ffmpeg
+RUN apk add --no-cache ffmpeg curl
 
-# Install bun
-RUN npm install -g bun@1.0.22
+# Install Bun using the official installation script
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH="/root/.bun/bin:${PATH}"
 
 # Copy built files from builder
 COPY --from=builder /app/node_modules ./node_modules
