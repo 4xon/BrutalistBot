@@ -15,14 +15,17 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install --production
+# Install all dependencies (including dev dependencies for building)
+RUN npm install
 
 # Copy application source
 COPY . .
 
 # Build the application
 RUN npm run build
+
+# Prune dev dependencies for production
+RUN npm prune --production
 
 # Set environment variables
 ENV NODE_ENV=production
@@ -31,16 +34,14 @@ ENV PORT=3000
 # Expose the port the app runs on
 EXPOSE 3000
 
-# Command to run the application
-CMD ["npm", "start"]
-USER node
+# Create a non-root user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
+# Set the working directory ownership
+RUN chown -R appuser:appgroup /app
 
-# Environment variables should be provided at runtime (e.g., via docker-compose.yaml)
+# Switch to non-root user
+USER appuser
 
-# Expose port (adjust if needed based on your application)
-EXPOSE 3000
-
-
-# Start the application
-CMD ["elizaos", "start"]
+# Start the application using npx to run the local elizaos
+CMD ["npx", "elizaos", "start"]
