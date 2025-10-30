@@ -1,39 +1,23 @@
-FROM node:23.3.0-slim
+# Build stage
+FROM node:18-alpine AS builder
 
-# Install essential dependencies for the build process
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    build-essential \
-    curl \
-    ffmpeg \
-    g++ \
-    git \
-    make \
+# Install build dependencies
+RUN apk add --no-cache \
     python3 \
-    unzip && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    make \
+    g++ \
+    git
 
+# Install bun
+RUN npm install -g bun@1.0.22
 
-
-# Install bun globally with npm
-RUN npm install -g bun
-
-# Add bun global bin to PATH for root and node users
-ENV PATH="/root/.bun/bin:/home/node/.bun/bin:$PATH"
-
-# Create a wrapper script for elizaos that uses the local installation
-RUN echo '#!/bin/bash\nexec /app/node_modules/.bin/elizaos "$@"' > /usr/local/bin/elizaos && \
-    chmod +x /usr/local/bin/elizaos
-
-# Set working directory
 WORKDIR /app
 
 # Copy package files first for better caching
 COPY package.json bun.lock* ./
 
-# Install dependencies
-RUN bun install
+# Install production dependencies only
+RUN bun install --frozen-lockfile --production
 
 # Copy the rest of the application
 COPY . .
@@ -41,13 +25,36 @@ COPY . .
 # Build the application
 RUN bun run build
 
-# Change ownership of the app directory to node user
-RUN chown -R node:node /app
+# Production stage
+FROM node:18-alpine
 
-# Create node user's bun directory
-RUN mkdir -p /home/node/.bun && chown -R node:node /home/node/.bun
+WORKDIR /app
 
-# Switch to non-root user
+# Install runtime dependencies
+RUN apk add --no-cache ffmpeg
+
+# Install bun
+RUN npm install -g bun@1.0.22
+
+# Copy built files from builder
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package.json .
+
+# Create non-root user
+RUN addgroup -S app && adduser -S app -G app
+RUN chown -R app:app /app
+USER app
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Expose the port the app runs on
+EXPOSE 3000
+
+# Command to run the application
+CMD ["bun", "start"]
 USER node
 
 
